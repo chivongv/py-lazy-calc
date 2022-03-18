@@ -1,0 +1,9 @@
+A add 2
+A add 3
+print A
+B add 5
+B subtract 2
+print B
+A add 1
+print A
+quit

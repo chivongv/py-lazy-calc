@@ -1,0 +1,9 @@
+a add b
+b add c
+c add 2
+b add 1
+print a
+
+print z
+quit
+print d

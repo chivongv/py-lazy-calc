@@ -1,0 +1,15 @@
+a1 add 7
+a1 ADD 9
+PRINT a1
+b add a1
+b SUbtract 2
+print b
+d add 2
+d divide 2
+print d
+c add 3
+c multiPlY 4
+print c
+test
+2 add 4
+quit
