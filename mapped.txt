@@ -1,0 +1,10 @@
+A add B
+B add 5
+C add 2
+A add B
+A add C
+print A
+A add 3
+A add 5
+print A
+print B

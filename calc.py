@@ -14,9 +14,11 @@ class LoopException(Exception):
 class Commands(Enum):
     QUIT = "quit"
     PRINT = "print"
+    CLEAR = "clear"
+    RESET = "reset"
 
     def toString():
-        return "print quit"
+        return "print quit clear reset"
 
 class Operations(Enum):
     ADD = "add"
@@ -49,6 +51,20 @@ def isValidOperator(op):
 
 def printInvalidCommand(line):
     print('Command \'' + line + '\' is not valid. Please enter a valid command. Commands: ' + Commands.toString())
+
+def mappedToInput(reg, val):
+    return [reg, 'add', val]
+
+def clearInputs():
+    mInputs.clear()
+
+def resetAll():
+    mInputs.clear()
+    mMappedValues.clear()
+
+def debug():
+    print(mInputs)
+    print(mMappedValues)
 
 def evaluate(reg):
     if(isNumeric(reg)):
@@ -84,6 +100,7 @@ def evaluate(reg):
             result *= evaluate(i[2])
 
     mMappedValues[reg] = result
+    mInputs[reg] = [] # clear the inputs for reg since we already evaluated reg
     return result
 
 def processLine(line):
@@ -116,7 +133,11 @@ def processLine(line):
         if(currentCommand.lower() == Commands.PRINT.value):
             if(currentReg in mInputs):
                 try:
-                    mMappedValues.clear()
+                    # make use of evaluated regs
+                    if(currentReg in mMappedValues and len(mInputs[currentReg]) > 0):
+                        input = mappedToInput(currentReg, mMappedValues[currentReg])
+                        mInputs[currentReg].insert(0, input) # add mapped to beginning of mInputs
+                        mMappedValues.pop(currentReg, None) # remove reg from mMappedValues
                     mVisited.clear()
                     print(evaluate(currentReg))
                 except LoopException:
@@ -125,8 +146,13 @@ def processLine(line):
                 print("This register name '" + currentReg + "' does not exists.")
 
     elif (currentReg == "debug"):
-        print(mInputs)
-        print(mMappedValues)
+        debug()
+
+    elif (currentReg == "clear"):
+        clearInputs()
+
+    elif (currentReg == "reset"):
+        resetAll()
 
     else:
         printInvalidCommand(line)
