@@ -1,0 +1,10 @@
+quit add 2
+aadd 2
+b add 1
+b add a
+c add 2
+c multiply 2
+print c
+print b
+print a
+print quit

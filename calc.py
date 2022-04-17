@@ -1,13 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys
 from enum import Enum
 
-mInputs = {}
-mMappedValues = {}
-mVisited = set()
+m_inputs = {}
+m_mapped_values = {}
+m_visited = set()
 
-class LoopException(Exception):
+class InputLoopError(Exception):
     """Raised when the inputs created a loop"""
     pass
 
@@ -17,7 +17,7 @@ class Commands(Enum):
     CLEAR = "clear"
     RESET = "reset"
 
-    def toString():
+    def to_string():
         return "print quit clear reset"
 
 class Operations(Enum):
@@ -25,65 +25,66 @@ class Operations(Enum):
     SUBTRACT = "subtract"
     MULTIPLY = "multiply"
 
-    def toString():
+    def to_string():
         return "add subtract multiply"
 
-def printUsage():
+def print_usage():
     print('Input usage: <register> <operation> <value>' +
-    '\nOperations: ' + Operations.toString() +
-    '\nCommands: ' + Commands.toString() + '\n')
+    '\nOperations: ' + Operations.to_string() +
+    '\nValid commands: ' + Commands.to_string() + '\n')
 
-def isNumeric(k):
+def is_numeric(k):
     try:
         a = int(k)
         return True
     except ValueError:
-        # if k is not a value, check if k is not in mInputs then add [] to mInputs[k]
-        if(not k in mInputs):
-            mInputs[k] = []
+        # if k is not a value, check if k is not in m_inputs then add [] to m_inputs[k]
+        if(not k in m_inputs):
+            m_inputs[k] = []
+
         return False
 
-def isValidOperator(op):
+def is_valid_operator(op):
     for i in Operations:
         if(op == i.value):
             return True
+
     return False
 
-def printInvalidCommand(line):
-    print('Command \'' + line + '\' is not valid. Please enter a valid command. Commands: ' + Commands.toString())
+def print_invalid_command(command):
+    print('Command \'' + command + '\' is not valid. Please enter a valid command. Commands: ' + Commands.to_string())
 
-def mappedToInput(reg, val):
+def mapped_to_input(reg, val):
     return [reg, 'add', val]
 
-def clearInputs():
-    mInputs.clear()
+def clear_inputs():
+    m_inputs.clear()
 
-def resetAll():
-    mInputs.clear()
-    mMappedValues.clear()
+def reset_all():
+    m_inputs.clear()
+    m_mapped_values.clear()
 
 def debug():
-    print(mInputs)
-    print(mMappedValues)
+    print(m_inputs)
+    print(m_mapped_values)
 
 def evaluate(reg):
-    if(isNumeric(reg)):
+    if(is_numeric(reg)):
         return int(reg)
 
     # returns value if reg already been evaluated
-    if(mMappedValues.get(reg)):
-        return mMappedValues.get(reg)
+    if(m_mapped_values.get(reg)):
+        return m_mapped_values.get(reg)
 
-    if (reg in mVisited):
-        # Here we can either 1. log out error and exit script or 2. throw error and catch it higher up. I choose option 2
-        raise LoopException("Cycle detected. Please check the inputs.")
+    if (reg in m_visited):
+        raise InputLoopError("Cycle detected. Please check the inputs.")
     
     result = 0
-    mVisited.add(reg)
+    m_visited.add(reg)
     # get only the inputs for the current reg
-    regInputs = mInputs[reg]
+    reg_inputs = m_inputs[reg]
 
-    for i in regInputs:
+    for i in reg_inputs:
         operator = i[1].lower()
 
         # skip if mReg is not same as reg
@@ -99,67 +100,82 @@ def evaluate(reg):
         elif(operator == Operations.MULTIPLY.value):
             result *= evaluate(i[2])
 
-    mMappedValues[reg] = result
-    mInputs[reg] = [] # clear the inputs for reg since we already evaluated reg
+    m_mapped_values[reg] = result
+    m_inputs[reg] = [] # clear the inputs for reg since we already evaluated reg
     return result
 
-def processLine(line):
+def process_iine(line):
     op = line.lower().split(" ")
-    currentReg = op[0]
-    opLength = len(op)
+    current_reg = op[0]
+    op_length = len(op)
 
-    if(opLength == 3):
+    if(op_length == 3):
         operator = op[1].lower()
 
-        if(isNumeric(currentReg)):
-            print("Register '" + currentReg + "' is not valid. Please enter a alphanumeric register name.")
+        if(is_numeric(current_reg)):
+            print("Register '" + current_reg + "' is not valid. Please enter a alphanumeric register name.")
+            # we can not have numeric register name due to e.g. 2 add 1, A add 2 -> should 2 be evaluated here as reg or number?
             return
 
-        if(isValidOperator(operator)):
-            if(currentReg in mInputs):
-                # get inputs for the current reg, append current line and put it in mInputs
-                regInputs = mInputs.get(currentReg)
-                regInputs.append(op)
-                mInputs[currentReg] = regInputs
+        if(is_valid_operator(operator)):
+            if(current_reg in m_inputs):
+                # get inputs for the current reg, append current line and put it in m_inputs
+                reg_inputs = m_inputs.get(current_reg)
+                reg_inputs.append(op)
+                m_inputs[current_reg] = reg_inputs
             else:
-                mInputs[currentReg] = [op]
+                m_inputs[current_reg] = [op]
             
         else:
-            print('Operator \'' + operator + '\' is not supported yet. Please enter one of these operators: ' + Operations.toString())
+            print('Operator \'' + operator + '\' is not supported yet. Please enter one of these operators: ' + Operations.to_string())
 
-    elif(opLength == 2):
-        currentCommand = op[0]
-        currentReg = op[1]
-        if(currentCommand.lower() == Commands.PRINT.value):
-            if(currentReg in mInputs):
+    elif(op_length == 2):
+        current_command = op[0]
+        current_reg = op[1]
+
+        if(current_command.lower() == Commands.PRINT.value):
+            if(current_reg in m_inputs):
                 try:
                     # make use of evaluated regs
-                    if(currentReg in mMappedValues and len(mInputs[currentReg]) > 0):
-                        input = mappedToInput(currentReg, mMappedValues[currentReg])
-                        mInputs[currentReg].insert(0, input) # add mapped to beginning of mInputs
-                        mMappedValues.pop(currentReg, None) # remove reg from mMappedValues
-                    mVisited.clear()
-                    print(evaluate(currentReg))
-                except LoopException:
-                    print("Cycle detected. Please check the inputs.")
-            else:
-                print("This register name '" + currentReg + "' does not exists.")
+                    if(current_reg in m_mapped_values and len(m_inputs[current_reg]) > 0):
+                        input = mapped_to_input(current_reg, m_mapped_values[current_reg])
+                        m_inputs[current_reg].insert(0, input) # add mapped to beginning of m_inputs
+                        m_mapped_values.pop(current_reg, None) # remove reg from m_mapped_values
 
-    elif (currentReg == "debug"):
+                    m_visited.clear()
+                    print(evaluate(current_reg))
+
+                except InputLoopError:
+                    print("Cycle detected. Please check the inputs.")
+
+                except Exception as e:
+                    print("Something went wrong during evaluation. " + e)
+            else:
+                print("This register name '" + current_reg + "' does not exists.")
+        else:
+            print_invalid_command(current_command)
+
+    elif (current_reg == "debug"):
+        print("Debugging...")
         debug()
 
-    elif (currentReg == "clear"):
-        clearInputs()
+    elif (current_reg == "clear"):
+        clear_inputs()
+        print("All inputs has been cleared.")
 
-    elif (currentReg == "reset"):
-        resetAll()
+    elif (current_reg == "reset"):
+        reset_all()
+        print("All values has been reseted.")
+
+    elif (current_reg == "print"):
+        print("Please add a register name along with print e.g. print <register>")
 
     else:
-        printInvalidCommand(line)
+        print_invalid_command(line)
 
 def main():
     print('Welcome to simple calc with lazy evaluation')
-    printUsage()
+    print_usage()
 
     # Reading files
     if (len(sys.argv) >= 2):
@@ -167,24 +183,30 @@ def main():
             try:
                 file = open(sys.argv[i], 'r')
                 print("Reading from file \'" + sys.argv[i] + "\'")
+
                 for line in file:
                     if(line.lower().strip() == Commands.QUIT.value):
                         break
-                    processLine(line.strip())
+                    process_iine(line.strip())
+
                 file.close()
                 print('')
-                mInputs.clear()
-                mMappedValues.clear()
+                m_inputs.clear()
+                m_mapped_values.clear()
+
             except FileNotFoundError:
                 print('File \'' + sys.argv[i] + '\' can not be found.\n')
+
+            except Exception as e:
+                print("Something went wrong during reading files. " + e)
 
     # Read line by line from user
     else:
         line = input('Please enter your command: ')
-        while(not line.lower().__contains__(Commands.QUIT.value)):
-            processLine(line)
+
+        while(not line.lower() == Commands.QUIT.value):
+            process_iine(line)
             line = input('Please enter your command: ')
             
-
 if __name__ == "__main__":
     main()
